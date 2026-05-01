@@ -2,104 +2,106 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1208" />
     <title>The Clockmaker</title>
     <style>
-      /* ─── Reset & Base ─────────────────────────────────── */
+      /* ─── Reset ──────────────────────────────────────────────── */
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
 
       :root {
-        --cream: #faf6f0;
-        --parchment: #f5ede0;
-        --gold: #c8a35a;
-        --dark: #2a1f14;
-        --mid: #6b4f35;
-        --light-text: #9a7a5a;
-        --ink: #1a1208;
-        --panel-bg: #fdf9f4;
-        --border: #d9c9b3;
-        --radius: 10px;
+        --cream:    #faf6f0;
+        --parchment:#f5ede0;
+        --gold:     #c8a35a;
+        --dark:     #1a1208;
+        --dark2:    #2a1f14;
+        --mid:      #6b4f35;
+        --lt:       #9a7a5a;
+        --ink:      #1a1208;
+        --border:   #d9c9b3;
+        --panel:    #fdf9f4;
+        --green:    #4caf50;
+        --red:      #e57373;
+        --r:        8px;
         font-family: Georgia, 'Times New Roman', serif;
-      }
-
-      html, body {
-        height: 100%;
-        background: var(--cream);
         color: var(--ink);
-        overflow: hidden;
-      }
-
-      /* ─── Layout ───────────────────────────────────────── */
-      #app {
-        display: grid;
-        height: 100vh;
-        grid-template-rows: auto 1fr auto;
-        grid-template-columns: 1fr 320px;
-        grid-template-areas:
-          "header header"
-          "stage  side"
-          "controls controls";
-        gap: 0;
-      }
-
-      /* ─── Header ───────────────────────────────────────── */
-      #header {
-        grid-area: header;
         background: var(--dark);
-        color: var(--cream);
-        padding: 10px 20px;
+      }
+
+      /* ─── App shell: header | stage | bottom-panel ───────────── */
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;         /* dynamic viewport height for mobile */
+        background: var(--dark);
+      }
+
+      /* ─── Header ─────────────────────────────────────────────── */
+      #header {
+        flex: 0 0 auto;
         display: flex;
         align-items: center;
-        gap: 20px;
-        border-bottom: 2px solid var(--gold);
+        gap: 10px;
+        padding: 8px 14px;
+        background: var(--dark);
+        border-bottom: 1px solid #3a2f20;
       }
 
       #header h1 {
-        font-size: 1.1rem;
+        font-size: 0.85rem;
         font-weight: normal;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.12em;
         color: var(--gold);
         white-space: nowrap;
+        text-transform: uppercase;
       }
 
-      #header-info {
+      #header-status {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 6px;
+        flex: 1;
+        min-width: 0;
+        justify-content: flex-end;
+      }
+
+      .header-level {
+        font-size: 0.8rem;
+        color: #d0b07a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         flex: 1;
         min-width: 0;
       }
 
-      .header-level {
-        font-size: 0.95rem;
+      .badge {
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.65rem;
+        font-family: sans-serif;
         font-weight: bold;
-        color: var(--gold);
-      }
-
-      .header-brief {
-        font-size: 0.8rem;
-        color: #c8b898;
-        flex: 1;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-style: italic;
+        flex-shrink: 0;
+      }
+      .badge--running { background: #1b5e20; color: #81c784; }
+      .badge--paused  { background: #4a3a00; color: #ffd54f; }
+      .badge--setup   { background: #0d2f5a; color: #90caf9; }
+      .badge--done    { background: #4a2200; color: var(--gold); }
+      .ts-badge {
+        font-family: monospace;
+        font-size: 0.68rem;
+        color: #7a6a4a;
+        white-space: nowrap;
       }
 
-      .header-status {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        font-size: 0.75rem;
-        color: #a0906a;
-      }
-
-      /* ─── Stage ────────────────────────────────────────── */
+      /* ─── Stage ──────────────────────────────────────────────── */
       #stage {
-        grid-area: stage;
-        background: var(--parchment);
-        border-right: 1px solid var(--border);
+        flex: 1 1 0;
+        min-height: 0;
         position: relative;
+        background: var(--parchment);
         overflow: hidden;
       }
 
@@ -107,117 +109,310 @@
         width: 100%;
         height: 100%;
         display: block;
+        touch-action: manipulation;
       }
 
-      /* ─── Side Panel (Chronicle + State) ──────────────── */
-      #side {
-        grid-area: side;
-        display: grid;
-        grid-template-rows: 1fr 1fr;
-        background: var(--panel-bg);
-        border-left: 1px solid var(--border);
-        overflow: hidden;
+      /* ─── Level banner ───────────────────────────────────────── */
+      #level-banner {
+        display: none;
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--dark);
+        padding: 10px 22px;
+        border-radius: var(--r);
+        font-size: 0.85rem;
+        border: 1px solid var(--gold);
+        z-index: 20;
+        pointer-events: none;
+        text-align: center;
+        white-space: nowrap;
       }
+      .level-banner--won     { color: #81c784; }
+      .level-banner--timeout { color: #ffb74d; }
 
-      #chronicle-section {
+      /* ─── Bottom panel ───────────────────────────────────────── */
+      #bottom-panel {
+        flex: 0 0 auto;
         display: flex;
         flex-direction: column;
+        background: var(--panel);
+        border-top: 2px solid var(--border);
+        /* Height controlled via JS/CSS variable, user can expand */
+        height: 38vh;
+        max-height: 75vh;
+        min-height: 120px;
+        position: relative;
+      }
+
+      /* drag handle */
+      #panel-handle {
+        flex: 0 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: ns-resize;
+        touch-action: none;
+        user-select: none;
+        background: var(--panel);
+      }
+      #panel-handle::after {
+        content: "";
+        width: 36px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      /* ─── Tab bar ─────────────────────────────────────────────── */
+      #tab-bar {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 0;
         border-bottom: 1px solid var(--border);
-        overflow: hidden;
-      }
-
-      #state-section {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .panel-title {
         background: #f0e8d8;
-        border-bottom: 1px solid var(--border);
-        padding: 6px 12px;
-        font-size: 0.7rem;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      #tab-bar::-webkit-scrollbar { display: none; }
+
+      .tab-btn {
+        flex: 1 0 auto;
+        padding: 8px 12px;
+        border: none;
+        background: none;
+        font-size: 0.72rem;
+        font-family: sans-serif;
+        color: var(--lt);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        transition: color 0.15s, border-color 0.15s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        min-width: 56px;
+      }
+      .tab-btn .tab-icon { font-size: 1rem; }
+      .tab-btn.active {
+        color: var(--mid);
+        border-bottom-color: var(--gold);
+        background: var(--panel);
+      }
+
+      /* ─── Tab content ─────────────────────────────────────────── */
+      #tab-content {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
+
+      .tab-pane { display: none; padding: 10px 12px; }
+      .tab-pane.active { display: block; }
+
+      /* ─── Goals tab ───────────────────────────────────────────── */
+      #tab-goals { padding: 10px 12px; }
+
+      .win-conditions {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin-bottom: 10px;
+      }
+      .win-condition {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.78rem;
+        padding: 6px 10px;
+        border-radius: var(--r);
+        background: #eee4d4;
         color: var(--mid);
         font-family: sans-serif;
-        flex-shrink: 0;
+        border: 1px solid var(--border);
+      }
+      .win-condition .wc-icon { font-size: 1rem; flex-shrink: 0; }
+      .win-condition--met { background: #dff0df; color: #2e6a2e; border-color: #a5d6a7; }
+
+      /* ─── Run controls ───────────────────────────────────────── */
+      .run-controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
       }
 
-      #chronicle {
-        flex: 1;
-        overflow-y: auto;
-        padding: 8px;
-        font-size: 0.78rem;
-        line-height: 1.5;
-      }
-
-      #state-panel {
-        flex: 1;
-        overflow-y: auto;
-        padding: 8px;
-      }
-
-      /* ─── Controls ─────────────────────────────────────── */
-      #controls-bar {
-        grid-area: controls;
-        background: #f0e8d8;
-        border-top: 2px solid var(--border);
-        padding: 8px 16px;
-        min-height: 80px;
-      }
-
-      #controls {
+      .btn {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        background: #fff;
+        color: var(--ink);
+        font-size: 0.82rem;
+        cursor: pointer;
+        font-family: sans-serif;
         display: flex;
-        align-items: flex-start;
-        gap: 16px;
-        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: background 0.12s;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+      .btn:active:not(:disabled) { background: #e8dcc8; }
+      .btn:disabled { opacity: 0.38; cursor: default; }
+
+      .btn--primary {
+        background: var(--dark);
+        color: var(--gold);
+        border-color: var(--dark);
+        font-weight: bold;
+        grid-column: 1 / -1;     /* spans full width */
+        font-size: 1rem;
+        padding: 14px;
+      }
+      .btn--primary:active { background: var(--dark2); }
+
+      .btn--secondary {
+        background: var(--dark2);
+        color: #d0b07a;
+        border-color: #3a2f20;
+        font-size: 0.75rem;
       }
 
-      /* ─── Chronicle Entries ────────────────────────────── */
+      .speed-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .speed-label {
+        font-size: 0.7rem;
+        color: var(--lt);
+        font-family: sans-serif;
+        white-space: nowrap;
+      }
+      .btn--speed {
+        flex: 1;
+        padding: 6px 4px;
+        font-size: 0.7rem;
+        border-radius: 6px;
+      }
+      .btn--speed-active { background: var(--gold) !important; color: #fff; border-color: var(--gold); }
+
+      .step-info {
+        text-align: center;
+        font-size: 0.72rem;
+        color: var(--lt);
+        font-family: monospace;
+        margin-top: 4px;
+      }
+
+      /* ─── Setup controls ─────────────────────────────────────── */
+      .setup-brief {
+        font-size: 0.75rem;
+        color: var(--mid);
+        font-style: italic;
+        font-family: sans-serif;
+        margin-bottom: 8px;
+      }
+      .char-tray {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .char-chip {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 4px 10px;
+        font-size: 0.72rem;
+        cursor: grab;
+        font-family: sans-serif;
+        user-select: none;
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .char-loc {
+        color: var(--lt);
+        font-size: 0.65rem;
+      }
+      .location-targets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .location-drop-target {
+        flex: 1 0 calc(33% - 6px);
+        min-width: 80px;
+        padding: 8px 6px;
+        border: 2px dashed var(--border);
+        border-radius: var(--r);
+        font-size: 0.72rem;
+        color: var(--mid);
+        font-family: sans-serif;
+        text-align: center;
+        transition: background 0.12s, border-color 0.12s;
+      }
+      .location-drop-target.dragover { background: #fff3cd; border-color: var(--gold); }
+
+      /* ─── Chronicle tab ──────────────────────────────────────── */
+      #tab-chronicle { padding: 6px 8px; }
       .chronicle-entry {
-        padding: 3px 4px;
+        padding: 4px 6px;
         border-radius: 4px;
         cursor: pointer;
-        transition: background 0.15s;
+        transition: background 0.12s;
+        font-size: 0.78rem;
+        line-height: 1.5;
+        border-bottom: 1px solid #f0e8d8;
       }
-
-      .chronicle-entry:hover { background: #ede4d4; }
-      .chronicle-entry--highlighted { background: #ffe9b0; }
-
+      .chronicle-entry:last-child { border-bottom: none; }
+      .chronicle-entry:active { background: #ede4d4; }
+      .chronicle-entry--highlighted { background: #fff3cd; }
       .chronicle-ts {
-        color: var(--light-text);
-        font-size: 0.72rem;
+        color: var(--lt);
+        font-size: 0.68rem;
         font-family: monospace;
         margin-right: 4px;
       }
-
       .chronicle-break {
         text-align: center;
         color: var(--gold);
-        font-size: 0.7rem;
-        margin: 8px 0;
-        letter-spacing: 0.05em;
+        font-size: 0.68rem;
+        margin: 8px 0 4px;
+        letter-spacing: 0.06em;
         font-family: sans-serif;
       }
 
-      /* ─── State Panel ──────────────────────────────────── */
+      /* ─── Inspect tab ────────────────────────────────────────── */
+      #tab-inspect { padding: 8px 12px; }
       .state-placeholder {
-        color: var(--light-text);
+        color: var(--lt);
         font-style: italic;
-        font-size: 0.8rem;
-        padding: 8px;
+        font-size: 0.78rem;
+        text-align: center;
+        padding: 20px 0;
+        font-family: sans-serif;
       }
-
       .char-card-header {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 6px 4px;
+        padding: 6px 0;
         border-bottom: 1px solid var(--border);
-        margin-bottom: 6px;
+        margin-bottom: 8px;
       }
-
       .char-dot {
         width: 12px;
         height: 12px;
@@ -225,274 +420,185 @@
         display: inline-block;
         flex-shrink: 0;
       }
-
-      .char-name {
-        font-weight: bold;
-        font-size: 0.85rem;
-      }
-
-      .char-archetype {
-        color: var(--light-text);
-        font-size: 0.73rem;
-        font-style: italic;
-      }
-
-      .char-stats {
-        margin-bottom: 8px;
-      }
-
+      .char-name { font-weight: bold; font-size: 0.88rem; }
+      .char-archetype { color: var(--lt); font-size: 0.72rem; font-style: italic; }
+      .char-stats { margin-bottom: 8px; }
       .stat {
         display: flex;
         align-items: center;
         gap: 6px;
-        margin-bottom: 3px;
+        margin-bottom: 4px;
         font-size: 0.72rem;
         font-family: sans-serif;
       }
-
-      .stat-label {
-        width: 66px;
-        color: var(--mid);
-        font-size: 0.7rem;
-      }
-
-      .stat-bar {
-        flex: 1;
-        height: 6px;
-        background: #e0d4c0;
-        border-radius: 3px;
-        overflow: hidden;
-      }
-
-      .stat-fill {
-        height: 100%;
-        background: var(--gold);
-        border-radius: 3px;
-        transition: width 0.3s;
-      }
-
-      .stat-fill.rep { background: #4caf50; }
-      .stat-fill.sus { background: #e57373; }
-
-      .stat-val {
-        width: 20px;
-        text-align: right;
-        font-size: 0.7rem;
-        color: var(--mid);
-      }
-
-      .char-section {
-        margin: 6px 0;
-      }
-
+      .stat-label { width: 72px; color: var(--mid); }
+      .stat-bar { flex: 1; height: 7px; background: #e0d4c0; border-radius: 4px; overflow: hidden; }
+      .stat-fill { height: 100%; background: var(--gold); border-radius: 4px; transition: width 0.3s; }
+      .stat-fill.rep { background: var(--green); }
+      .stat-fill.sus { background: var(--red); }
+      .stat-val { width: 22px; text-align: right; font-size: 0.7rem; color: var(--mid); }
       .section-title {
-        font-size: 0.68rem;
-        letter-spacing: 0.08em;
+        font-size: 0.65rem;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: var(--light-text);
-        margin-bottom: 3px;
+        color: var(--lt);
+        margin: 8px 0 3px;
         font-family: sans-serif;
       }
-
       .affection-row, .item-row, .memory-row {
-        font-size: 0.73rem;
-        padding: 1px 0;
+        font-size: 0.75rem;
+        padding: 2px 0;
         display: flex;
         justify-content: space-between;
-      }
-
-      .affection-val { color: #e91e8c; font-weight: bold; }
-
-      /* ─── Controls Styles ──────────────────────────────── */
-      .win-conditions {
-        display: flex;
         gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 6px;
       }
+      .affection-val { color: #c2185b; font-weight: bold; }
 
-      .win-condition {
-        font-size: 0.72rem;
-        padding: 3px 8px;
-        border-radius: 12px;
-        background: #e8dcc8;
-        color: var(--mid);
-        font-family: sans-serif;
+      /* ─── Actions tab ────────────────────────────────────────── */
+      #tab-actions { padding: 6px 8px; }
+      .action-card {
+        margin-bottom: 8px;
         border: 1px solid var(--border);
-      }
-
-      .win-condition--met {
-        background: #c8e6c9;
-        color: #2e7d32;
-        border-color: #a5d6a7;
-      }
-
-      .setup-controls, .run-controls {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .setup-instructions {
-        font-size: 0.75rem;
-        color: var(--mid);
-        font-style: italic;
-        font-family: sans-serif;
-      }
-
-      .char-tray {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-
-      .char-chip {
-        display: flex;
-        align-items: center;
-        gap: 4px;
+        border-radius: var(--r);
+        overflow: hidden;
         background: #fff;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 3px 8px;
-        font-size: 0.72rem;
-        cursor: grab;
-        font-family: sans-serif;
+      }
+      .action-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        cursor: pointer;
+        background: var(--parchment);
+        -webkit-tap-highlight-color: transparent;
         user-select: none;
       }
-
-      .char-chip:active { cursor: grabbing; }
-
-      .char-loc {
-        color: var(--light-text);
-        font-size: 0.68rem;
-      }
-
-      .location-targets {
-        display: flex;
-        gap: 6px;
-      }
-
-      .location-drop-target {
-        padding: 4px 10px;
-        border: 2px dashed var(--border);
-        border-radius: 6px;
-        font-size: 0.72rem;
-        color: var(--mid);
-        font-family: sans-serif;
-        cursor: default;
-        transition: background 0.15s, border-color 0.15s;
-      }
-
-      .location-drop-target.dragover {
-        background: #fff3cd;
-        border-color: var(--gold);
-      }
-
-      .btn {
-        padding: 5px 12px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: #fff;
-        color: var(--ink);
+      .action-name {
         font-size: 0.78rem;
-        cursor: pointer;
-        font-family: sans-serif;
-        transition: background 0.15s;
-      }
-
-      .btn:hover:not(:disabled) { background: #f0e8d8; }
-      .btn:disabled { opacity: 0.4; cursor: default; }
-
-      .btn--primary {
-        background: var(--dark);
-        color: var(--gold);
-        border-color: var(--dark);
         font-weight: bold;
+        font-family: sans-serif;
+        flex: 1;
       }
-
-      .btn--primary:hover:not(:disabled) { background: #3a2f20; }
-
-      .btn--speed { font-size: 0.7rem; padding: 3px 8px; }
-      .btn--speed-active { background: var(--gold); color: #fff; border-color: var(--gold); }
-
-      .btn-row, .speed-row { display: flex; gap: 6px; align-items: center; }
-
-      .step-info {
-        font-size: 0.75rem;
-        color: var(--mid);
-        font-family: monospace;
-        white-space: nowrap;
-      }
-
-      .badge {
-        padding: 2px 7px;
-        border-radius: 8px;
+      .action-count {
         font-size: 0.68rem;
-        font-family: sans-serif;
-        font-weight: bold;
-      }
-
-      .badge--running { background: #c8e6c9; color: #1b5e20; }
-      .badge--paused  { background: #fff3cd; color: #7a5c00; }
-      .badge--setup   { background: #e3f2fd; color: #0d47a1; }
-      .badge--done    { background: var(--gold); color: #fff; }
-
-      /* ─── Level Banner ─────────────────────────────────── */
-      #level-banner {
-        display: none;
-        position: fixed;
-        top: 60px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--dark);
-        color: var(--gold);
-        padding: 12px 28px;
+        font-family: monospace;
+        color: var(--lt);
+        background: #e8dcc8;
+        padding: 1px 6px;
         border-radius: 8px;
-        font-size: 0.9rem;
-        border: 1px solid var(--gold);
-        z-index: 100;
-        pointer-events: none;
+      }
+      .action-chevron {
+        font-size: 0.6rem;
+        color: var(--lt);
+        transition: transform 0.2s;
+      }
+      .action-card.open .action-chevron { transform: rotate(90deg); }
+      .action-body {
+        display: none;
+        padding: 8px 10px;
+        font-size: 0.74rem;
+        font-family: sans-serif;
+      }
+      .action-card.open .action-body { display: block; }
+      .action-desc { color: var(--mid); margin-bottom: 6px; line-height: 1.4; }
+      .action-affinity-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 3px;
+      }
+      .affinity-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .affinity-name { color: var(--mid); flex: 1; }
+      .affinity-role {
+        font-size: 0.65rem;
+        background: #e8dcc8;
+        padding: 1px 5px;
+        border-radius: 6px;
+        color: var(--mid);
       }
 
-      .level-banner--won { color: #81c784; }
-      .level-banner--timeout { color: #ffb74d; }
+      /* ─── Graph tab ──────────────────────────────────────────── */
+      #tab-graph { padding: 6px 0; }
+      #graph-svg-wrap {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      #graph-svg { display: block; min-width: 100%; }
+      .graph-empty {
+        padding: 24px 16px;
+        text-align: center;
+        font-size: 0.78rem;
+        color: var(--lt);
+        font-family: sans-serif;
+        font-style: italic;
+      }
+      .graph-section-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--lt);
+        font-family: sans-serif;
+        padding: 4px 12px;
+        margin-top: 4px;
+      }
 
-      /* ─── Scrollbars ───────────────────────────────────── */
-      #chronicle::-webkit-scrollbar,
-      #state-panel::-webkit-scrollbar { width: 5px; }
-      #chronicle::-webkit-scrollbar-thumb,
-      #state-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+      /* ─── Scrollbars ─────────────────────────────────────────── */
+      #tab-content::-webkit-scrollbar { width: 4px; }
+      #tab-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
     </style>
   </head>
   <body>
     <div id="app">
+      <!-- Header -->
       <header id="header">
         <h1>The Clockmaker</h1>
-        <div id="header-info"></div>
+        <div id="header-status"></div>
       </header>
 
+      <!-- Stage -->
       <main id="stage">
-        <svg id="stage-svg" viewBox="0 0 680 380" preserveAspectRatio="xMidYMid meet"></svg>
+        <svg id="stage-svg" viewBox="0 0 660 360" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="level-banner"></div>
       </main>
 
-      <aside id="side">
-        <section id="chronicle-section">
-          <div class="panel-title">Chronicle</div>
-          <div id="chronicle"></div>
-        </section>
-        <section id="state-section">
-          <div class="panel-title">Character State</div>
-          <div id="state-panel"></div>
-        </section>
-      </aside>
+      <!-- Bottom panel -->
+      <div id="bottom-panel">
+        <div id="panel-handle"></div>
 
-      <footer id="controls-bar">
-        <div id="controls"></div>
-      </footer>
+        <!-- Tab bar -->
+        <nav id="tab-bar">
+          <button class="tab-btn active" data-tab="goals">
+            <span class="tab-icon">🎯</span>Goals
+          </button>
+          <button class="tab-btn" data-tab="chronicle">
+            <span class="tab-icon">📜</span>Log
+          </button>
+          <button class="tab-btn" data-tab="inspect">
+            <span class="tab-icon">👤</span>Inspect
+          </button>
+          <button class="tab-btn" data-tab="actions">
+            <span class="tab-icon">⚔️</span>Actions
+          </button>
+          <button class="tab-btn" data-tab="graph">
+            <span class="tab-icon">🕸️</span>Graph
+          </button>
+        </nav>
+
+        <!-- Tab content -->
+        <div id="tab-content">
+          <div id="tab-goals"   class="tab-pane active"></div>
+          <div id="tab-chronicle" class="tab-pane"></div>
+          <div id="tab-inspect"  class="tab-pane"></div>
+          <div id="tab-actions"  class="tab-pane"></div>
+          <div id="tab-graph"    class="tab-pane"></div>
+        </div>
+      </div>
     </div>
-
-    <div id="level-banner"></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
