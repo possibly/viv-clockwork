@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Clockmaker</title>
+    <style>
+      /* ─── Reset & Base ─────────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --cream: #faf6f0;
+        --parchment: #f5ede0;
+        --gold: #c8a35a;
+        --dark: #2a1f14;
+        --mid: #6b4f35;
+        --light-text: #9a7a5a;
+        --ink: #1a1208;
+        --panel-bg: #fdf9f4;
+        --border: #d9c9b3;
+        --radius: 10px;
+        font-family: Georgia, 'Times New Roman', serif;
+      }
+
+      html, body {
+        height: 100%;
+        background: var(--cream);
+        color: var(--ink);
+        overflow: hidden;
+      }
+
+      /* ─── Layout ───────────────────────────────────────── */
+      #app {
+        display: grid;
+        height: 100vh;
+        grid-template-rows: auto 1fr auto;
+        grid-template-columns: 1fr 320px;
+        grid-template-areas:
+          "header header"
+          "stage  side"
+          "controls controls";
+        gap: 0;
+      }
+
+      /* ─── Header ───────────────────────────────────────── */
+      #header {
+        grid-area: header;
+        background: var(--dark);
+        color: var(--cream);
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        border-bottom: 2px solid var(--gold);
+      }
+
+      #header h1 {
+        font-size: 1.1rem;
+        font-weight: normal;
+        letter-spacing: 0.08em;
+        color: var(--gold);
+        white-space: nowrap;
+      }
+
+      #header-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .header-level {
+        font-size: 0.95rem;
+        font-weight: bold;
+        color: var(--gold);
+      }
+
+      .header-brief {
+        font-size: 0.8rem;
+        color: #c8b898;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-style: italic;
+      }
+
+      .header-status {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 0.75rem;
+        color: #a0906a;
+      }
+
+      /* ─── Stage ────────────────────────────────────────── */
+      #stage {
+        grid-area: stage;
+        background: var(--parchment);
+        border-right: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+      }
+
+      #stage-svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      /* ─── Side Panel (Chronicle + State) ──────────────── */
+      #side {
+        grid-area: side;
+        display: grid;
+        grid-template-rows: 1fr 1fr;
+        background: var(--panel-bg);
+        border-left: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      #chronicle-section {
+        display: flex;
+        flex-direction: column;
+        border-bottom: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      #state-section {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-title {
+        background: #f0e8d8;
+        border-bottom: 1px solid var(--border);
+        padding: 6px 12px;
+        font-size: 0.7rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--mid);
+        font-family: sans-serif;
+        flex-shrink: 0;
+      }
+
+      #chronicle {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+        font-size: 0.78rem;
+        line-height: 1.5;
+      }
+
+      #state-panel {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      /* ─── Controls ─────────────────────────────────────── */
+      #controls-bar {
+        grid-area: controls;
+        background: #f0e8d8;
+        border-top: 2px solid var(--border);
+        padding: 8px 16px;
+        min-height: 80px;
+      }
+
+      #controls {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      /* ─── Chronicle Entries ────────────────────────────── */
+      .chronicle-entry {
+        padding: 3px 4px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .chronicle-entry:hover { background: #ede4d4; }
+      .chronicle-entry--highlighted { background: #ffe9b0; }
+
+      .chronicle-ts {
+        color: var(--light-text);
+        font-size: 0.72rem;
+        font-family: monospace;
+        margin-right: 4px;
+      }
+
+      .chronicle-break {
+        text-align: center;
+        color: var(--gold);
+        font-size: 0.7rem;
+        margin: 8px 0;
+        letter-spacing: 0.05em;
+        font-family: sans-serif;
+      }
+
+      /* ─── State Panel ──────────────────────────────────── */
+      .state-placeholder {
+        color: var(--light-text);
+        font-style: italic;
+        font-size: 0.8rem;
+        padding: 8px;
+      }
+
+      .char-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 4px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 6px;
+      }
+
+      .char-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+      }
+
+      .char-name {
+        font-weight: bold;
+        font-size: 0.85rem;
+      }
+
+      .char-archetype {
+        color: var(--light-text);
+        font-size: 0.73rem;
+        font-style: italic;
+      }
+
+      .char-stats {
+        margin-bottom: 8px;
+      }
+
+      .stat {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 3px;
+        font-size: 0.72rem;
+        font-family: sans-serif;
+      }
+
+      .stat-label {
+        width: 66px;
+        color: var(--mid);
+        font-size: 0.7rem;
+      }
+
+      .stat-bar {
+        flex: 1;
+        height: 6px;
+        background: #e0d4c0;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+
+      .stat-fill {
+        height: 100%;
+        background: var(--gold);
+        border-radius: 3px;
+        transition: width 0.3s;
+      }
+
+      .stat-fill.rep { background: #4caf50; }
+      .stat-fill.sus { background: #e57373; }
+
+      .stat-val {
+        width: 20px;
+        text-align: right;
+        font-size: 0.7rem;
+        color: var(--mid);
+      }
+
+      .char-section {
+        margin: 6px 0;
+      }
+
+      .section-title {
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--light-text);
+        margin-bottom: 3px;
+        font-family: sans-serif;
+      }
+
+      .affection-row, .item-row, .memory-row {
+        font-size: 0.73rem;
+        padding: 1px 0;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .affection-val { color: #e91e8c; font-weight: bold; }
+
+      /* ─── Controls Styles ──────────────────────────────── */
+      .win-conditions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+      }
+
+      .win-condition {
+        font-size: 0.72rem;
+        padding: 3px 8px;
+        border-radius: 12px;
+        background: #e8dcc8;
+        color: var(--mid);
+        font-family: sans-serif;
+        border: 1px solid var(--border);
+      }
+
+      .win-condition--met {
+        background: #c8e6c9;
+        color: #2e7d32;
+        border-color: #a5d6a7;
+      }
+
+      .setup-controls, .run-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .setup-instructions {
+        font-size: 0.75rem;
+        color: var(--mid);
+        font-style: italic;
+        font-family: sans-serif;
+      }
+
+      .char-tray {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .char-chip {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 0.72rem;
+        cursor: grab;
+        font-family: sans-serif;
+        user-select: none;
+      }
+
+      .char-chip:active { cursor: grabbing; }
+
+      .char-loc {
+        color: var(--light-text);
+        font-size: 0.68rem;
+      }
+
+      .location-targets {
+        display: flex;
+        gap: 6px;
+      }
+
+      .location-drop-target {
+        padding: 4px 10px;
+        border: 2px dashed var(--border);
+        border-radius: 6px;
+        font-size: 0.72rem;
+        color: var(--mid);
+        font-family: sans-serif;
+        cursor: default;
+        transition: background 0.15s, border-color 0.15s;
+      }
+
+      .location-drop-target.dragover {
+        background: #fff3cd;
+        border-color: var(--gold);
+      }
+
+      .btn {
+        padding: 5px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 0.78rem;
+        cursor: pointer;
+        font-family: sans-serif;
+        transition: background 0.15s;
+      }
+
+      .btn:hover:not(:disabled) { background: #f0e8d8; }
+      .btn:disabled { opacity: 0.4; cursor: default; }
+
+      .btn--primary {
+        background: var(--dark);
+        color: var(--gold);
+        border-color: var(--dark);
+        font-weight: bold;
+      }
+
+      .btn--primary:hover:not(:disabled) { background: #3a2f20; }
+
+      .btn--speed { font-size: 0.7rem; padding: 3px 8px; }
+      .btn--speed-active { background: var(--gold); color: #fff; border-color: var(--gold); }
+
+      .btn-row, .speed-row { display: flex; gap: 6px; align-items: center; }
+
+      .step-info {
+        font-size: 0.75rem;
+        color: var(--mid);
+        font-family: monospace;
+        white-space: nowrap;
+      }
+
+      .badge {
+        padding: 2px 7px;
+        border-radius: 8px;
+        font-size: 0.68rem;
+        font-family: sans-serif;
+        font-weight: bold;
+      }
+
+      .badge--running { background: #c8e6c9; color: #1b5e20; }
+      .badge--paused  { background: #fff3cd; color: #7a5c00; }
+      .badge--setup   { background: #e3f2fd; color: #0d47a1; }
+      .badge--done    { background: var(--gold); color: #fff; }
+
+      /* ─── Level Banner ─────────────────────────────────── */
+      #level-banner {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--dark);
+        color: var(--gold);
+        padding: 12px 28px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        border: 1px solid var(--gold);
+        z-index: 100;
+        pointer-events: none;
+      }
+
+      .level-banner--won { color: #81c784; }
+      .level-banner--timeout { color: #ffb74d; }
+
+      /* ─── Scrollbars ───────────────────────────────────── */
+      #chronicle::-webkit-scrollbar,
+      #state-panel::-webkit-scrollbar { width: 5px; }
+      #chronicle::-webkit-scrollbar-thumb,
+      #state-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header id="header">
+        <h1>The Clockmaker</h1>
+        <div id="header-info"></div>
+      </header>
+
+      <main id="stage">
+        <svg id="stage-svg" viewBox="0 0 680 380" preserveAspectRatio="xMidYMid meet"></svg>
+      </main>
+
+      <aside id="side">
+        <section id="chronicle-section">
+          <div class="panel-title">Chronicle</div>
+          <div id="chronicle"></div>
+        </section>
+        <section id="state-section">
+          <div class="panel-title">Character State</div>
+          <div id="state-panel"></div>
+        </section>
+      </aside>
+
+      <footer id="controls-bar">
+        <div id="controls"></div>
+      </footer>
+    </div>
+
+    <div id="level-banner"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

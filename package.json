@@ -1,0 +1,22 @@
+{
+  "name": "viv-clockwork",
+  "version": "0.1.0",
+  "description": "The Clockmaker — a Regency England social simulation game",
+  "type": "module",
+  "scripts": {
+    "prebuild": "vivc -i src/content/season.viv -o src/content/compiled_bundle.json",
+    "predev": "vivc -i src/content/season.viv -o src/content/compiled_bundle.json",
+    "dev": "vite",
+    "build": "vite build",
+    "compile-viv": "vivc -i src/content/season.viv -o src/content/compiled_bundle.json"
+  },
+  "dependencies": {
+    "@siftystudio/viv-runtime": "^0.10.2",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.0.0"
+  }
+}
