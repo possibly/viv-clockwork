@@ -1,12 +1,42 @@
 import {
   boot, startEvening, canStart, placeCharacter,
-  GAME, CHARACTERS,
+  GAME, CHARACTERS, getAffection,
 } from "./game";
 import {
   buildRoomSVG, updateStage, wireDropZone,
   pulseCharacters, setTapPendingChar, getTapPendingChar, clearTapPending,
 } from "./stage";
 import { showMomentCard, appendScrollEntry, celebrateGoal } from "./moments";
+
+// ── Action catalogue (mirrors scene.viv) ─────────────────────────────────────
+
+type ActionInfo = { id: string; label: string; minAff: number };
+
+const ACTION_CATALOGUE: ActionInfo[] = [
+  { id: "exchange-pleasantries", label: "Exchange Pleasantries", minAff: 0 },
+  { id: "offer-compliment",      label: "Offer Compliment",      minAff: 0 },
+  { id: "show-interest",         label: "Show Interest",         minAff: 3 },
+  { id: "request-dance",         label: "Request Dance",         minAff: 10 },
+];
+
+function renderActionRows(charId: string): string {
+  const placed = GAME.placedCharacters.has(charId);
+  const otherId = CHARACTERS.find((c) => c.id !== charId)!.id;
+  const aff = placed ? getAffection(charId, otherId) : 0;
+
+  return ACTION_CATALOGUE.map((a) => {
+    const available = placed && aff >= a.minAff;
+    const req = a.minAff > 0 && !available
+      ? `<span class="action-req">${aff}/${a.minAff} aff</span>`
+      : "";
+    return `
+      <div class="action-row${available ? " action-row--on" : ""}">
+        <span class="action-dot${available ? " action-dot--on" : ""}"></span>
+        <span class="action-label">${a.label}</span>
+        ${req}
+      </div>`;
+  }).join("");
+}
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -44,14 +74,19 @@ function renderGuestList(): void {
     card.style.setProperty("--char-color", def.color);
     card.style.setProperty("--char-dark", def.colorDark);
     card.innerHTML = `
-      <div class="guest-portrait" style="background:${def.color}">
-        <span class="guest-initial">${def.name[0]}</span>
+      <div class="guest-top">
+        <div class="guest-portrait" style="background:${def.color}">
+          <span class="guest-initial">${def.name[0]}</span>
+        </div>
+        <div class="guest-info">
+          <div class="guest-name">${def.name}</div>
+          <div class="guest-title">${def.title}</div>
+        </div>
+        <div class="guest-status" id="guest-status-${def.id}">Awaiting placement</div>
       </div>
-      <div class="guest-info">
-        <div class="guest-name">${def.name}</div>
-        <div class="guest-title">${def.title}</div>
+      <div class="guest-actions" id="guest-actions-${def.id}">
+        ${renderActionRows(def.id)}
       </div>
-      <div class="guest-status" id="guest-status-${def.id}">Awaiting placement</div>
     `;
 
     // Desktop drag
@@ -132,6 +167,10 @@ function render(): void {
   if (canStart() && GAME.phase === "setup") {
     beginBtn.textContent = "Begin the Evening";
     beginBtn.classList.add("begin-btn--ready");
+  }
+  for (const def of CHARACTERS) {
+    const el = document.getElementById(`guest-actions-${def.id}`);
+    if (el) el.innerHTML = renderActionRows(def.id);
   }
 }
 

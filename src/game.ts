@@ -72,11 +72,18 @@ export function boot(): void {
   // Ballroom is always present
   addLocation("ballroom", "The Ashford Ballroom");
 
-  // Characters start "offstage" (location = their own id, treated as tray)
+  // Characters start "offstage" (location = their own id, treated as tray).
+  // Affection is pre-seeded to 0 for every pair so the runtime never encounters
+  // an undefined lookup when evaluating conditions like `affection[@recipient] >= 3`.
   for (const def of CHARACTERS) {
+    const affection: Record<string, number> = {};
+    for (const other of CHARACTERS) {
+      if (other.id !== def.id) affection[other.id] = 0;
+    }
     addCharacter(def.id, def.name, def.id /* offstage */, {
       charm: def.charm,
       archetype: def.archetype,
+      affection,
     });
   }
 }
@@ -132,9 +139,11 @@ async function runStep(): Promise<void> {
 
     const participants: string[] = [];
     if (a.bindings) {
-      for (const v of Object.values(a.bindings)) {
-        if (typeof v === "string" && STATE.characters.includes(v) && !participants.includes(v))
-          participants.push(v);
+      for (const candidates of Object.values(a.bindings)) {
+        for (const v of candidates) {
+          if (typeof v === "string" && STATE.characters.includes(v) && !participants.includes(v))
+            participants.push(v);
+        }
       }
     }
 
