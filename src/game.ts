@@ -118,13 +118,13 @@ async function runStep(): Promise<void> {
 
   const actionsBefore = STATE.actions.length;
 
-  // One action per step. The character with higher affection initiates;
-  // the runtime role-casts the other as partner.
-  const initiatorId = CHARACTERS.reduce((best, c) =>
-    getAffection(c.id) >= getAffection(best) ? c.id : best,
-    CHARACTERS[0].id
-  );
-  await selectAction({ initiatorID: initiatorId });
+  // Call selectAction for each placed character so each character's urgent
+  // response queue is processed (responses are queued for the partner, not
+  // the initiator, so we must give every character a turn each step).
+  for (const def of CHARACTERS) {
+    if (!GAME.placedCharacters.has(def.id)) continue;
+    await selectAction({ initiatorID: def.id });
+  }
 
   STATE.timestamp = (STATE.timestamp + 10) as typeof STATE.timestamp;
   GAME.stepCount++;
@@ -157,7 +157,7 @@ async function runStep(): Promise<void> {
     GAME.moments.push(moment);
     GAME.onMoment?.(moment);
 
-    if (name === "request-dance" && !GAME.goalMet) {
+    if (name === "accept-dance" && !GAME.goalMet) {
       GAME.goalMet = true;
       setTimeout(() => {
         GAME.phase = "won";

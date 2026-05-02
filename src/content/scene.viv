@@ -1,8 +1,15 @@
 // The Clockmaker — Level 1: The Ashford Ballroom
+//
+// Social bids are two-beat: an initiating action fires, then a reserved
+// action-selector fires urgently for the partner, choosing a response
+// conditioned on the responder's affection + the initiator's charm.
+// This means a charming initiator can unlock warmer responses sooner.
+
+// ── Social bids ───────────────────────────────────────────────────────────────
 
 action exchange-pleasantries:
     gloss: "Exchange pleasantries"
-    report: '{@initiator.name} and {@partner.name} exchanged the expected pleasantries.'
+    report: '{@initiator.name} and {@partner.name} exchanged pleasantries.'
     saliences:
         default: 4
     roles:
@@ -14,9 +21,14 @@ action exchange-pleasantries:
         @initiator.location == @partner.location
         @initiator != @partner
     effects:
-        @initiator.affection += 3
-        @partner.affection += 3
-        @partner.charm += 1
+        @initiator.affection += 1
+        @partner.affection += 1
+    reactions:
+        queue action-selector pick-pleasantries-response:
+            with:
+                @responder: @partner
+                @greeter: @initiator
+            urgent: true
 
 action offer-compliment:
     gloss: "Offer a compliment"
@@ -31,14 +43,19 @@ action offer-compliment:
     conditions:
         @initiator.location == @partner.location
         @initiator != @partner
+        @initiator.affection >= 5
     effects:
-        @initiator.affection += 5
-        @partner.affection += 3
-        @initiator.charm += 1
+        @partner.affection += 2
+    reactions:
+        queue action-selector pick-compliment-response:
+            with:
+                @responder: @partner
+                @giver: @initiator
+            urgent: true
 
 action show-interest:
     gloss: "Show genuine interest"
-    report: '{@initiator.name} showed a noticeable, sincere interest in {@partner.name}.'
+    report: '{@initiator.name} showed genuine interest in {@partner.name}.'
     saliences:
         default: 6
     roles:
@@ -49,11 +66,15 @@ action show-interest:
     conditions:
         @initiator.location == @partner.location
         @initiator != @partner
-        @initiator.affection >= 3
+        @initiator.affection >= 12
     effects:
-        @initiator.affection += 8
-        @partner.affection += 5
-        @partner.charm += 2
+        @partner.affection += 3
+    reactions:
+        queue action-selector pick-interest-response:
+            with:
+                @responder: @partner
+                @admirer: @initiator
+            urgent: true
 
 action request-dance:
     gloss: "Request a dance"
@@ -69,7 +90,255 @@ action request-dance:
     conditions:
         @initiator.location == @partner.location
         @initiator != @partner
-        @initiator.affection >= 10
+        @initiator.affection >= 20
+    reactions:
+        queue action-selector pick-dance-response:
+            with:
+                @responder: @partner
+                @requester: @initiator
+            urgent: true
+
+// ── Pleasantries responses ────────────────────────────────────────────────────
+
+reserved action-selector pick-pleasantries-response:
+    roles:
+        @responder:
+            as: initiator
+        @greeter:
+            as: partner
+    target in order:
+        reciprocate-warmly:
+            with:
+                @responder: @responder
+                @greeter: @greeter
+        acknowledge-politely:
+            with:
+                @responder: @responder
+                @greeter: @greeter
+        reply-coolly:
+            with:
+                @responder: @responder
+                @greeter: @greeter
+
+reserved action reciprocate-warmly:
+    gloss: "Reciprocate warmly"
+    report: '{@responder.name} warmly returned the pleasantries.'
+    roles:
+        @responder:
+            as: initiator
+        @greeter:
+            as: partner
+    conditions:
+        @responder.affection + @greeter.charm >= 9
     effects:
-        @initiator.affection += 15
-        @partner.affection += 10
+        @greeter.affection += 3
+        @responder.affection += 1
+        @greeter.charm += 1
+
+reserved action acknowledge-politely:
+    gloss: "Acknowledge politely"
+    report: '{@responder.name} responded politely.'
+    roles:
+        @responder:
+            as: initiator
+        @greeter:
+            as: partner
+    conditions:
+        @responder.affection + @greeter.charm >= 3
+    effects:
+        @greeter.affection += 1
+
+reserved action reply-coolly:
+    gloss: "Reply coolly"
+    report: '{@responder.name} gave a cool reply.'
+    roles:
+        @responder:
+            as: initiator
+        @greeter:
+            as: partner
+    effects:
+        @greeter.affection -= 1
+        @greeter.charm -= 1
+
+// ── Compliment responses ──────────────────────────────────────────────────────
+
+reserved action-selector pick-compliment-response:
+    roles:
+        @responder:
+            as: initiator
+        @giver:
+            as: partner
+    target in order:
+        accept-compliment-warmly:
+            with:
+                @responder: @responder
+                @giver: @giver
+        accept-graciously:
+            with:
+                @responder: @responder
+                @giver: @giver
+        deflect-modestly:
+            with:
+                @responder: @responder
+                @giver: @giver
+
+reserved action accept-compliment-warmly:
+    gloss: "Accept warmly"
+    report: '{@responder.name} received the compliment warmly.'
+    roles:
+        @responder:
+            as: initiator
+        @giver:
+            as: partner
+    conditions:
+        @responder.affection + @giver.charm >= 9
+    effects:
+        @giver.affection += 5
+        @responder.affection += 2
+        @giver.charm += 1
+
+reserved action accept-graciously:
+    gloss: "Accept graciously"
+    report: '{@responder.name} accepted the compliment graciously.'
+    roles:
+        @responder:
+            as: initiator
+        @giver:
+            as: partner
+    conditions:
+        @responder.affection + @giver.charm >= 3
+    effects:
+        @giver.affection += 2
+
+reserved action deflect-modestly:
+    gloss: "Deflect"
+    report: '{@responder.name} deflected the compliment.'
+    roles:
+        @responder:
+            as: initiator
+        @giver:
+            as: partner
+
+// ── Interest responses ────────────────────────────────────────────────────────
+
+reserved action-selector pick-interest-response:
+    roles:
+        @responder:
+            as: initiator
+        @admirer:
+            as: partner
+    target in order:
+        encourage-interest:
+            with:
+                @responder: @responder
+                @admirer: @admirer
+        acknowledge-interest:
+            with:
+                @responder: @responder
+                @admirer: @admirer
+        discourage-interest:
+            with:
+                @responder: @responder
+                @admirer: @admirer
+
+reserved action encourage-interest:
+    gloss: "Encourage"
+    report: '{@responder.name} encouraged the attention.'
+    roles:
+        @responder:
+            as: initiator
+        @admirer:
+            as: partner
+    conditions:
+        @responder.affection + @admirer.charm >= 9
+    effects:
+        @admirer.affection += 8
+        @responder.affection += 3
+        @admirer.charm += 1
+
+reserved action acknowledge-interest:
+    gloss: "Acknowledge"
+    report: '{@responder.name} acknowledged the attention.'
+    roles:
+        @responder:
+            as: initiator
+        @admirer:
+            as: partner
+    conditions:
+        @responder.affection + @admirer.charm >= 3
+    effects:
+        @admirer.affection += 3
+
+reserved action discourage-interest:
+    gloss: "Discourage"
+    report: '{@responder.name} did not encourage the attention.'
+    roles:
+        @responder:
+            as: initiator
+        @admirer:
+            as: partner
+    effects:
+        @admirer.affection -= 2
+
+// ── Dance responses ───────────────────────────────────────────────────────────
+
+reserved action-selector pick-dance-response:
+    roles:
+        @responder:
+            as: initiator
+        @requester:
+            as: partner
+    target in order:
+        accept-dance:
+            with:
+                @responder: @responder
+                @requester: @requester
+        decline-gracefully:
+            with:
+                @responder: @responder
+                @requester: @requester
+        refuse-firmly:
+            with:
+                @responder: @responder
+                @requester: @requester
+
+reserved action accept-dance:
+    gloss: "Accept"
+    report: '{@responder.name} accepted.'
+    importance: 10
+    roles:
+        @responder:
+            as: initiator
+        @requester:
+            as: partner
+    conditions:
+        @responder.affection + @requester.charm >= 12
+    effects:
+        @requester.affection += 15
+        @responder.affection += 10
+
+reserved action decline-gracefully:
+    gloss: "Decline gracefully"
+    report: '{@responder.name} declined gracefully.'
+    roles:
+        @responder:
+            as: initiator
+        @requester:
+            as: partner
+    conditions:
+        @responder.affection + @requester.charm >= 6
+    effects:
+        @requester.affection -= 2
+        @responder.affection += 1
+
+reserved action refuse-firmly:
+    gloss: "Refuse"
+    report: '{@responder.name} refused.'
+    roles:
+        @responder:
+            as: initiator
+        @requester:
+            as: partner
+    effects:
+        @requester.affection -= 5
+        @requester.charm -= 1
