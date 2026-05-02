@@ -118,10 +118,13 @@ async function runStep(): Promise<void> {
 
   const actionsBefore = STATE.actions.length;
 
-  for (const charId of CHARACTERS.map((c) => c.id)) {
-    if (!GAME.placedCharacters.has(charId)) continue;
-    await selectAction({ initiatorID: charId });
-  }
+  // One action per step. The character with higher affection initiates;
+  // the runtime role-casts the other as partner.
+  const initiatorId = CHARACTERS.reduce((best, c) =>
+    getAffection(c.id) >= getAffection(best) ? c.id : best,
+    CHARACTERS[0].id
+  );
+  await selectAction({ initiatorID: initiatorId });
 
   STATE.timestamp = (STATE.timestamp + 10) as typeof STATE.timestamp;
   GAME.stepCount++;
