@@ -1,128 +1,144 @@
-import { initialize, setupLevel, SIM, getCurrentLevel } from "./viv/sim";
-import { STATE } from "./viv/adapter";
-import { renderStage, flashActionArc, setOnSelectChar } from "./ui/stage";
-import { renderChronicle, setOnHighlightAction } from "./ui/chronicle";
-import { renderStatePanel } from "./ui/statePanel";
-import { renderGoalsTab, setControlsUpdateCallback } from "./ui/controls";
-import { renderActionExplorer } from "./ui/actionExplorer";
-import { renderActionGraph } from "./ui/actionGraph";
-import { initTabs, switchTab, getActiveTab } from "./ui/tabs";
+import {
+  boot, startEvening, canStart, placeCharacter,
+  GAME, CHARACTERS,
+} from "./game";
+import {
+  buildRoomSVG, updateStage, wireDropZone,
+  pulseCharacters, setTapPendingChar, getTapPendingChar, clearTapPending,
+} from "./stage";
+import { showMomentCard, appendScrollEntry, celebrateGoal } from "./moments";
 
-let selectedCharId: string | null = null;
-let stageSvg: SVGSVGElement;
+// ── DOM refs ──────────────────────────────────────────────────────────────────
 
-// Tab content containers
-const tabs = {
-  goals:     () => document.getElementById("tab-goals")!,
-  chronicle: () => document.getElementById("tab-chronicle")!,
-  inspect:   () => document.getElementById("tab-inspect")!,
-  actions:   () => document.getElementById("tab-actions")!,
-  graph:     () => document.getElementById("tab-graph")!,
-};
+const svgEl       = document.getElementById("stage-svg") as unknown as SVGSVGElement;
+const guestList   = document.getElementById("guest-list")!;
+const beginBtn    = document.getElementById("begin-btn") as HTMLButtonElement;
+const goalEl      = document.getElementById("goal-indicator")!;
+const momentWrap  = document.getElementById("moment-wrap")!;
+const scrollEl       = document.getElementById("chronicle-scroll")!;
+const scrollMobile   = document.getElementById("chronicle-scroll-mobile")!;
 
-function renderActiveTab(): void {
-  const tab = getActiveTab();
-  switch (tab) {
-    case "goals":
-      renderGoalsTab(tabs.goals());
-      break;
-    case "chronicle":
-      renderChronicle(tabs.chronicle());
-      break;
-    case "inspect":
-      renderStatePanel(tabs.inspect(), selectedCharId);
-      break;
-    case "actions":
-      renderActionExplorer(tabs.actions());
-      break;
-    case "graph":
-      renderActionGraph(tabs.graph());
-      break;
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+
+boot();
+buildRoomSVG(svgEl);
+renderGuestList();
+renderGoal();
+
+// ── Stage drop zone ───────────────────────────────────────────────────────────
+
+wireDropZone(svgEl, (charId) => {
+  refreshGuestCard(charId);
+  render();
+});
+
+// ── Guest list ────────────────────────────────────────────────────────────────
+
+function renderGuestList(): void {
+  guestList.innerHTML = "";
+  for (const def of CHARACTERS) {
+    const card = document.createElement("div");
+    card.id = `guest-card-${def.id}`;
+    card.className = "guest-card";
+    card.draggable = true;
+    card.style.setProperty("--char-color", def.color);
+    card.style.setProperty("--char-dark", def.colorDark);
+    card.innerHTML = `
+      <div class="guest-portrait" style="background:${def.color}">
+        <span class="guest-initial">${def.name[0]}</span>
+      </div>
+      <div class="guest-info">
+        <div class="guest-name">${def.name}</div>
+        <div class="guest-title">${def.title}</div>
+      </div>
+      <div class="guest-status" id="guest-status-${def.id}">Awaiting placement</div>
+    `;
+
+    // Desktop drag
+    card.addEventListener("dragstart", (e) => {
+      (e as DragEvent).dataTransfer?.setData("text/plain", def.id);
+      clearTapPending();
+    });
+
+    // Mobile tap-to-select, then tap stage
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (GAME.placedCharacters.has(def.id)) return;
+      const alreadySelected = getTapPendingChar() === def.id;
+      clearTapPending();
+      document.querySelectorAll(".guest-card").forEach((c) => c.classList.remove("guest-card--selected"));
+      if (!alreadySelected) {
+        setTapPendingChar(def.id);
+        card.classList.add("guest-card--selected");
+      }
+    });
+
+    guestList.appendChild(card);
   }
 }
 
-function updateHeader(): void {
-  const level = getCurrentLevel();
-  const statusEl = document.getElementById("header-status")!;
-  const modeLabel: Record<string, string> = {
-    setup: "Setup", running: "Running", paused: "Paused",
-    "level-complete": "Done", "game-over": "Season Over",
-  };
-  const modeCls: Record<string, string> = {
-    setup: "badge--setup", running: "badge--running", paused: "badge--paused",
-    "level-complete": "badge--done", "game-over": "badge--done",
-  };
+function refreshGuestCard(charId: string): void {
+  const statusEl = document.getElementById(`guest-status-${charId}`);
+  if (statusEl) statusEl.textContent = "In the ballroom";
+  const card = document.getElementById(`guest-card-${charId}`);
+  card?.classList.add("guest-card--placed");
+  card?.classList.remove("guest-card--selected");
+}
 
-  statusEl.innerHTML = `
-    <span class="header-level">${level.name}</span>
-    ${STATE.timestamp > 0 ? `<span class="ts-badge">T=${STATE.timestamp}</span>` : ""}
-    <span class="badge ${modeCls[SIM.mode] ?? ""}">${modeLabel[SIM.mode] ?? SIM.mode}</span>
+// ── Goal indicator ────────────────────────────────────────────────────────────
+
+function renderGoal(): void {
+  goalEl.innerHTML = `
+    <div class="goal-seal">✦</div>
+    <div class="goal-text">
+      <div class="goal-heading">This Evening's Ambition</div>
+      <div class="goal-desc">Lord Ashworth must request a dance with Miss Pemberton</div>
+    </div>
   `;
 }
 
-function update(): void {
-  updateHeader();
-  renderStage(stageSvg);
-  renderActiveTab();
-}
+// ── Begin button ──────────────────────────────────────────────────────────────
 
-function onSelectCharacter(id: string | null): void {
-  selectedCharId = id;
-  // Switch to inspect tab when a character is tapped
-  if (id !== null) {
-    switchTab("inspect");
-  } else {
-    renderStatePanel(tabs.inspect(), null);
+beginBtn.addEventListener("click", () => {
+  if (!canStart()) return;
+  startEvening();
+  beginBtn.disabled = true;
+  beginBtn.textContent = "The Evening Unfolds…";
+  render();
+});
+
+// ── Game callbacks ────────────────────────────────────────────────────────────
+
+GAME.onMoment = (moment) => {
+  pulseCharacters(moment.participants);
+  showMomentCard(moment, momentWrap);
+  appendScrollEntry(moment, scrollEl);
+  appendScrollEntry(moment, scrollMobile);
+  render();
+};
+
+GAME.onGoalMet = () => {
+  celebrateGoal(goalEl, momentWrap);
+  render();
+};
+
+GAME.onTick = render;
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function render(): void {
+  updateStage(svgEl);
+  beginBtn.disabled = !canStart();
+  if (canStart() && GAME.phase === "setup") {
+    beginBtn.textContent = "Begin the Evening";
+    beginBtn.classList.add("begin-btn--ready");
   }
 }
 
-function bootstrap(): void {
-  stageSvg = document.getElementById("stage-svg") as unknown as SVGSVGElement;
-
-  initTabs((tab) => {
-    renderActiveTab();
-    // Re-render chronicle immediately so it's scrolled to bottom
-    if (tab === "chronicle") {
-      renderChronicle(tabs.chronicle());
-    }
-  });
-
-  setOnSelectChar(onSelectCharacter);
-
-  setOnHighlightAction(() => {
-    if (getActiveTab() === "chronicle") {
-      renderChronicle(tabs.chronicle());
-    }
-  });
-
-  setControlsUpdateCallback(update);
-
-  SIM.onUpdate = () => {
-    update();
-    const lastAction = STATE.actionLog[STATE.actionLog.length - 1];
-    if (lastAction) {
-      flashActionArc(lastAction.participants);
-      // Auto-append to chronicle if it's open (don't re-render fully for perf)
-      if (getActiveTab() === "chronicle") {
-        renderChronicle(tabs.chronicle());
-      }
-    }
-  };
-
-  SIM.onLevelComplete = (won: boolean) => {
-    const banner = document.getElementById("level-banner")!;
-    banner.textContent = won
-      ? "✓ All objectives achieved!"
-      : "Time's up — the event concludes.";
-    banner.className = `level-banner ${won ? "level-banner--won" : "level-banner--timeout"}`;
-    banner.style.display = "block";
-    setTimeout(() => { banner.style.display = "none"; }, 3000);
-    update();
-  };
-
-  initialize();
-  setupLevel(0);
-  update();
+// Continuous repaint for pulse animations (only while running)
+let rafId = 0;
+function continuousRender(): void {
+  if (GAME.phase === "running") updateStage(svgEl);
+  rafId = requestAnimationFrame(continuousRender);
 }
-
-document.addEventListener("DOMContentLoaded", bootstrap);
+continuousRender();

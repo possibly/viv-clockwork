@@ -4,11 +4,11 @@
   "description": "The Clockmaker — a Regency England social simulation game",
   "type": "module",
   "scripts": {
-    "prebuild": "vivc -i src/content/season.viv -o src/content/compiled_bundle.json",
-    "predev": "vivc -i src/content/season.viv -o src/content/compiled_bundle.json",
+    "prebuild": "vivc -i src/content/scene.viv -o src/content/bundle.json",
+    "predev": "vivc -i src/content/scene.viv -o src/content/bundle.json",
     "dev": "vite",
     "build": "vite build",
-    "compile-viv": "vivc -i src/content/season.viv -o src/content/compiled_bundle.json"
+    "compile-viv": "vivc -i src/content/scene.viv -o src/content/bundle.json"
   },
   "dependencies": {
     "@siftystudio/viv-runtime": "^0.10.2",

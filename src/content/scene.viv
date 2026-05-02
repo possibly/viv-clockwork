@@ -1,0 +1,76 @@
+// The Clockmaker — Level 1: The Ashford Ballroom
+// Two characters, four actions, one goal.
+
+action exchange-pleasantries:
+    gloss: "@initiator exchanges pleasantries with @recipient"
+    report: '{@initiator.name} and {@recipient.name} exchanged the pleasant nothings society demands — each secretly hoping the other might say something worth remembering.'
+    saliences:
+        default: 4
+    roles:
+        @initiator:
+            as: initiator
+        @recipient:
+            as: recipient
+    conditions:
+        @initiator.location == @recipient.location
+        @initiator != @recipient
+    effects:
+        @initiator.affection[@recipient] += 3
+        @recipient.affection[@initiator] += 3
+        @recipient.charm += 1
+
+action offer-compliment:
+    gloss: "@initiator offers a compliment to @recipient"
+    report: '{@initiator.name} leaned close and offered {@recipient.name} a compliment of such sincere warmth that the room seemed, for a moment, to grow rather brighter.'
+    saliences:
+        default: 5
+    roles:
+        @initiator:
+            as: initiator
+        @recipient:
+            as: recipient
+    conditions:
+        @initiator.location == @recipient.location
+        @initiator != @recipient
+    effects:
+        @initiator.affection[@recipient] += 5
+        @recipient.affection[@initiator] += 3
+        @initiator.charm += 1
+
+action show-interest:
+    gloss: "@initiator shows genuine interest in @recipient"
+    report: 'It had not gone unnoticed. {@initiator.name} had fixed their attention upon {@recipient.name} with a warmth that any attentive observer could not possibly mistake for mere politeness.'
+    saliences:
+        default: 6
+    roles:
+        @initiator:
+            as: initiator
+        @recipient:
+            as: recipient
+    conditions:
+        @initiator.location == @recipient.location
+        @initiator != @recipient
+        @initiator.affection[@recipient] >= 3
+    effects:
+        @initiator.affection[@recipient] += 8
+        @recipient.affection[@initiator] += 5
+        @recipient.charm += 2
+
+action request-dance:
+    gloss: "@initiator requests a dance with @recipient"
+    report: '{@initiator.name} extended a gloved hand toward {@recipient.name}. "Might I," they said, with that particular steadiness which signals a decided heart, "have the honour of the next dance?"'
+    importance: 10
+    saliences:
+        default: 9
+    roles:
+        @initiator:
+            as: initiator
+        @recipient:
+            as: recipient
+    conditions:
+        @initiator.location == @recipient.location
+        @initiator != @recipient
+        @initiator.affection[@recipient] >= 10
+    effects:
+        @initiator.affection[@recipient] += 15
+        @recipient.affection[@initiator] += 10
