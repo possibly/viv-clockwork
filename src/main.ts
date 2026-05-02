@@ -1,84 +1,183 @@
-import { initialize, setupLevel, SIM, getCurrentLevel } from "./viv/sim";
-import { STATE } from "./viv/adapter";
-import { renderStage, flashActionArc, setOnSelectChar } from "./ui/stage";
-import { renderChronicle, setOnHighlightAction } from "./ui/chronicle";
-import { renderStatePanel } from "./ui/statePanel";
-import { renderControls, setControlsUpdateCallback } from "./ui/controls";
+import {
+  boot, startEvening, canStart, placeCharacter,
+  GAME, CHARACTERS, getAffection,
+} from "./game";
+import {
+  buildRoomSVG, updateStage, wireDropZone,
+  pulseCharacters, setTapPendingChar, getTapPendingChar, clearTapPending,
+} from "./stage";
+import { showMomentCard, appendScrollEntry, celebrateGoal } from "./moments";
 
-let selectedCharId: string | null = null;
-let stageSvg: SVGSVGElement;
-let chronicleDiv: HTMLElement;
-let statePanelDiv: HTMLElement;
-let controlsDiv: HTMLElement;
-let headerDiv: HTMLElement;
+// ── Action catalogue (mirrors scene.viv) ─────────────────────────────────────
 
-function update(): void {
-  const level = getCurrentLevel();
+type ActionInfo = { id: string; label: string; minAff: number };
 
-  headerDiv.innerHTML = `
-    <div class="header-level">${level.name}</div>
-    <div class="header-brief">${level.brief}</div>
-    <div class="header-status">
-      ${STATE.timestamp > 0 ? `T=${STATE.timestamp}` : ""}
-      ${SIM.mode === "running" ? '<span class="badge badge--running">Running</span>' : ""}
-      ${SIM.mode === "paused" ? '<span class="badge badge--paused">Paused</span>' : ""}
-      ${SIM.mode === "setup" ? '<span class="badge badge--setup">Setup</span>' : ""}
-      ${SIM.mode === "level-complete" ? '<span class="badge badge--done">Level Complete</span>' : ""}
-      ${SIM.mode === "game-over" ? '<span class="badge badge--done">Season Over</span>' : ""}
+const ACTION_CATALOGUE: ActionInfo[] = [
+  { id: "exchange-pleasantries", label: "Exchange Pleasantries", minAff: 0 },
+  { id: "offer-compliment",      label: "Offer Compliment",      minAff: 0 },
+  { id: "show-interest",         label: "Show Interest",         minAff: 3 },
+  { id: "request-dance",         label: "Request Dance",         minAff: 10 },
+];
+
+function renderActionRows(charId: string): string {
+  const placed = GAME.placedCharacters.has(charId);
+  const otherId = CHARACTERS.find((c) => c.id !== charId)!.id;
+  const aff = placed ? getAffection(charId, otherId) : 0;
+
+  return ACTION_CATALOGUE.map((a) => {
+    const available = placed && aff >= a.minAff;
+    const req = a.minAff > 0 && !available
+      ? `<span class="action-req">${aff}/${a.minAff} aff</span>`
+      : "";
+    return `
+      <div class="action-row${available ? " action-row--on" : ""}">
+        <span class="action-dot${available ? " action-dot--on" : ""}"></span>
+        <span class="action-label">${a.label}</span>
+        ${req}
+      </div>`;
+  }).join("");
+}
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+
+const svgEl       = document.getElementById("stage-svg") as unknown as SVGSVGElement;
+const guestList   = document.getElementById("guest-list")!;
+const beginBtn    = document.getElementById("begin-btn") as HTMLButtonElement;
+const goalEl      = document.getElementById("goal-indicator")!;
+const momentWrap  = document.getElementById("moment-wrap")!;
+const scrollEl       = document.getElementById("chronicle-scroll")!;
+const scrollMobile   = document.getElementById("chronicle-scroll-mobile")!;
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+
+boot();
+buildRoomSVG(svgEl);
+renderGuestList();
+renderGoal();
+
+// ── Stage drop zone ───────────────────────────────────────────────────────────
+
+wireDropZone(svgEl, (charId) => {
+  refreshGuestCard(charId);
+  render();
+});
+
+// ── Guest list ────────────────────────────────────────────────────────────────
+
+function renderGuestList(): void {
+  guestList.innerHTML = "";
+  for (const def of CHARACTERS) {
+    const card = document.createElement("div");
+    card.id = `guest-card-${def.id}`;
+    card.className = "guest-card";
+    card.draggable = true;
+    card.style.setProperty("--char-color", def.color);
+    card.style.setProperty("--char-dark", def.colorDark);
+    card.innerHTML = `
+      <div class="guest-top">
+        <div class="guest-portrait" style="background:${def.color}">
+          <span class="guest-initial">${def.name[0]}</span>
+        </div>
+        <div class="guest-info">
+          <div class="guest-name">${def.name}</div>
+          <div class="guest-title">${def.title}</div>
+        </div>
+        <div class="guest-status" id="guest-status-${def.id}">Awaiting placement</div>
+      </div>
+      <div class="guest-actions" id="guest-actions-${def.id}">
+        ${renderActionRows(def.id)}
+      </div>
+    `;
+
+    // Desktop drag
+    card.addEventListener("dragstart", (e) => {
+      (e as DragEvent).dataTransfer?.setData("text/plain", def.id);
+      clearTapPending();
+    });
+
+    // Mobile tap-to-select, then tap stage
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (GAME.placedCharacters.has(def.id)) return;
+      const alreadySelected = getTapPendingChar() === def.id;
+      clearTapPending();
+      document.querySelectorAll(".guest-card").forEach((c) => c.classList.remove("guest-card--selected"));
+      if (!alreadySelected) {
+        setTapPendingChar(def.id);
+        card.classList.add("guest-card--selected");
+      }
+    });
+
+    guestList.appendChild(card);
+  }
+}
+
+function refreshGuestCard(charId: string): void {
+  const statusEl = document.getElementById(`guest-status-${charId}`);
+  if (statusEl) statusEl.textContent = "In the ballroom";
+  const card = document.getElementById(`guest-card-${charId}`);
+  card?.classList.add("guest-card--placed");
+  card?.classList.remove("guest-card--selected");
+}
+
+// ── Goal indicator ────────────────────────────────────────────────────────────
+
+function renderGoal(): void {
+  goalEl.innerHTML = `
+    <div class="goal-seal">✦</div>
+    <div class="goal-text">
+      <div class="goal-heading">This Evening's Ambition</div>
+      <div class="goal-desc">Lord Ashworth must request a dance with Miss Pemberton</div>
     </div>
   `;
-
-  renderStage(stageSvg);
-  renderChronicle(chronicleDiv);
-  renderStatePanel(statePanelDiv, selectedCharId);
-  renderControls(controlsDiv);
 }
 
-function bootstrap(): void {
-  stageSvg = document.getElementById("stage-svg") as unknown as SVGSVGElement;
-  chronicleDiv = document.getElementById("chronicle") as HTMLElement;
-  statePanelDiv = document.getElementById("state-panel") as HTMLElement;
-  controlsDiv = document.getElementById("controls") as HTMLElement;
-  headerDiv = document.getElementById("header-info") as HTMLElement;
+// ── Begin button ──────────────────────────────────────────────────────────────
 
-  setOnSelectChar((id) => {
-    selectedCharId = id;
-    renderStatePanel(statePanelDiv, selectedCharId);
-  });
+beginBtn.addEventListener("click", () => {
+  if (!canStart()) return;
+  startEvening();
+  beginBtn.disabled = true;
+  beginBtn.textContent = "The Evening Unfolds…";
+  render();
+});
 
-  setOnHighlightAction(() => {
-    renderChronicle(chronicleDiv);
-  });
+// ── Game callbacks ────────────────────────────────────────────────────────────
 
-  setControlsUpdateCallback(update);
+GAME.onMoment = (moment) => {
+  pulseCharacters(moment.participants);
+  showMomentCard(moment, momentWrap);
+  appendScrollEntry(moment, scrollEl);
+  appendScrollEntry(moment, scrollMobile);
+  render();
+};
 
-  SIM.onUpdate = () => {
-    update();
-    // Flash arcs for the most recent action
-    const lastAction = STATE.actionLog[STATE.actionLog.length - 1];
-    if (lastAction) {
-      flashActionArc(lastAction.participants);
-    }
-  };
+GAME.onGoalMet = () => {
+  celebrateGoal(goalEl, momentWrap);
+  render();
+};
 
-  SIM.onLevelComplete = (won: boolean) => {
-    const banner = document.getElementById("level-banner") as HTMLElement;
-    if (banner) {
-      banner.textContent = won
-        ? `✓ Level complete! All objectives achieved.`
-        : `Time's up — the event concludes.`;
-      banner.className = `level-banner ${won ? "level-banner--won" : "level-banner--timeout"}`;
-      banner.style.display = "block";
-      setTimeout(() => {
-        banner.style.display = "none";
-      }, 3000);
-    }
-    update();
-  };
+GAME.onTick = render;
 
-  initialize();
-  setupLevel(0);
-  update();
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function render(): void {
+  updateStage(svgEl);
+  beginBtn.disabled = !canStart();
+  if (canStart() && GAME.phase === "setup") {
+    beginBtn.textContent = "Begin the Evening";
+    beginBtn.classList.add("begin-btn--ready");
+  }
+  for (const def of CHARACTERS) {
+    const el = document.getElementById(`guest-actions-${def.id}`);
+    if (el) el.innerHTML = renderActionRows(def.id);
+  }
 }
 
-document.addEventListener("DOMContentLoaded", bootstrap);
+// Continuous repaint for pulse animations (only while running)
+let rafId = 0;
+function continuousRender(): void {
+  if (GAME.phase === "running") updateStage(svgEl);
+  rafId = requestAnimationFrame(continuousRender);
+}
+continuousRender();
