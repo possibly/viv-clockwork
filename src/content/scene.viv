@@ -15,8 +15,8 @@ action exchange-pleasantries:
         @initiator.location == @recipient.location
         @initiator != @recipient
     effects:
-        @initiator.affection[@recipient] += 3
-        @recipient.affection[@initiator] += 3
+        @initiator.affection += 3
+        @recipient.affection += 3
         @recipient.charm += 1
 
 action offer-compliment:
@@ -33,8 +33,8 @@ action offer-compliment:
         @initiator.location == @recipient.location
         @initiator != @recipient
     effects:
-        @initiator.affection[@recipient] += 5
-        @recipient.affection[@initiator] += 3
+        @initiator.affection += 5
+        @recipient.affection += 3
         @initiator.charm += 1
 
 action show-interest:
@@ -50,10 +50,10 @@ action show-interest:
     conditions:
         @initiator.location == @recipient.location
         @initiator != @recipient
-        @initiator.affection[@recipient] >= 3
+        @initiator.affection >= 3
     effects:
-        @initiator.affection[@recipient] += 8
-        @recipient.affection[@initiator] += 5
+        @initiator.affection += 8
+        @recipient.affection += 5
         @recipient.charm += 2
 
 action request-dance:
@@ -70,7 +70,7 @@ action request-dance:
     conditions:
         @initiator.location == @recipient.location
         @initiator != @recipient
-        @initiator.affection[@recipient] >= 10
+        @initiator.affection >= 10
     effects:
-        @initiator.affection[@recipient] += 15
-        @recipient.affection[@initiator] += 10
+        @initiator.affection += 15
+        @recipient.affection += 10

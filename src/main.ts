@@ -21,8 +21,7 @@ const ACTION_CATALOGUE: ActionInfo[] = [
 
 function renderActionRows(charId: string): string {
   const placed = GAME.placedCharacters.has(charId);
-  const otherId = CHARACTERS.find((c) => c.id !== charId)!.id;
-  const aff = placed ? getAffection(charId, otherId) : 0;
+  const aff = placed ? getAffection(charId) : 0;
 
   return ACTION_CATALOGUE.map((a) => {
     const available = placed && aff >= a.minAff;
@@ -54,6 +53,7 @@ boot();
 buildRoomSVG(svgEl);
 renderGuestList();
 renderGoal();
+render();
 
 // ── Stage drop zone ───────────────────────────────────────────────────────────
 
@@ -177,7 +177,7 @@ function render(): void {
 // Continuous repaint for pulse animations (only while running)
 let rafId = 0;
 function continuousRender(): void {
-  if (GAME.phase === "running") updateStage(svgEl);
+  updateStage(svgEl);
   rafId = requestAnimationFrame(continuousRender);
 }
 continuousRender();

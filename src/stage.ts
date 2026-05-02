@@ -3,13 +3,15 @@
  * affection arcs, and the interactive drop zone.
  */
 import { CHARACTERS, GAME, getAffection, getCharm, placeCharacter } from "./game";
-import { STATE } from "./adapter";
 
-// Character positions within the room (as % of room width/height)
-const CHAR_POSITIONS: Record<string, { x: number; y: number }> = {
-  "lord-ashworth":  { x: 0.28, y: 0.62 },
-  "miss-pemberton": { x: 0.72, y: 0.62 },
-};
+// Slot positions within the room (as % mapped to SVG coords)
+// Supports up to 4 characters; first N are used.
+const SLOT_POSITIONS = [
+  { x: 184, y: 250 },
+  { x: 472, y: 250 },
+  { x: 280, y: 310 },
+  { x: 376, y: 310 },
+];
 
 // Active pulse animations: charId → expiry timestamp
 const pulsingChars = new Map<string, number>();
@@ -22,6 +24,11 @@ export function pulseCharacters(charIds: string[]): void {
 // ── SVG room illustration ─────────────────────────────────────────────────────
 
 export function buildRoomSVG(svgEl: SVGSVGElement): void {
+  const slotElements = CHARACTERS.map((_, i) => {
+    const pos = SLOT_POSITIONS[i];
+    return `<g id="char-slot-${i}" transform="translate(${pos.x},${pos.y})"/>`;
+  }).join("\n    ");
+
   svgEl.innerHTML = `
     <defs>
       <!-- Parquet floor tile -->
@@ -137,9 +144,27 @@ export function buildRoomSVG(svgEl: SVGSVGElement): void {
     <path id="action-arc" d="" fill="none" stroke="#c9a96e" stroke-width="1.5"
           stroke-dasharray="6 4" opacity="0" style="transition: opacity 0.3s"/>
 
-    <!-- ── Character slots (medallion placeholders) ── -->
-    <g id="char-slot-lord-ashworth"  transform="translate(184,250)"/>
-    <g id="char-slot-miss-pemberton" transform="translate(472,250)"/>
+    <!-- ── Character slots (filled dynamically) ── -->
+    ${slotElements}
+  `;
+}
+
+// ── Generic "Place Character" placeholder ────────────────────────────────────
+
+function buildPlaceholder(): string {
+  const R = 36;
+  return `
+    <!-- Dashed outline ring -->
+    <circle cx="0" cy="0" r="${R}" fill="none" stroke="#c9a96e"
+            stroke-width="2" stroke-dasharray="8 5" opacity="0.55"/>
+    <!-- Generic silhouette (head + torso) -->
+    <ellipse cx="0" cy="-13" rx="10" ry="11" fill="#c9a96e" opacity="0.18"/>
+    <path d="M-12,2 Q-14,10 -14,26 L14,26 Q14,10 12,2 Z" fill="#c9a96e" opacity="0.18"/>
+    <!-- Label -->
+    <rect x="-46" y="${R + 8}" width="92" height="20" rx="10"
+          fill="#b8924a" opacity="0.45"/>
+    <text x="0" y="${R + 22}" text-anchor="middle" font-family="'Cinzel', serif"
+          font-size="8.5" fill="#e8d4a0" letter-spacing="0.5" opacity="0.8">Place Character</text>
   `;
 }
 
@@ -147,23 +172,18 @@ export function buildRoomSVG(svgEl: SVGSVGElement): void {
 
 function buildMedallion(
   charId: string,
-  placed: boolean,
   isPulsing: boolean
 ): string {
   const def = CHARACTERS.find((c) => c.id === charId)!;
-  const affectionToOther = getAffection(
-    charId,
-    CHARACTERS.find((c) => c.id !== charId)!.id
-  );
-  const affectionArc = Math.min(1, affectionToOther / 25); // normalise 0→1
-  const arcAngle = affectionArc * 270; // degrees
+  const affection = getAffection(charId);
+  const affectionArc = Math.min(1, affection / 25);
+  const arcAngle = affectionArc * 270;
 
-  const R = 36; // medallion radius
+  const R = 36;
   const circumference = 2 * Math.PI * R;
   const dash = (arcAngle / 360) * circumference;
 
   const glowOpacity = isPulsing ? "1" : "0";
-  const glowColor = def.color;
 
   const silhouette =
     def.archetype === "gentleman"
@@ -182,16 +202,16 @@ function buildMedallion(
 
   return `
     <!-- Glow ring (animates on action) -->
-    <circle cx="0" cy="0" r="${R + 12}" fill="${glowColor}" opacity="${glowOpacity}"
+    <circle cx="0" cy="0" r="${R + 12}" fill="${def.color}" opacity="${glowOpacity}"
             style="filter:blur(12px); transition: opacity 0.15s"/>
 
     <!-- Affection arc (progress ring) -->
     <circle cx="0" cy="0" r="${R + 5}" fill="none"
-            stroke="${glowColor}" stroke-width="4" opacity="0.25"
+            stroke="${def.color}" stroke-width="4" opacity="0.25"
             stroke-dasharray="${circumference}" stroke-dashoffset="0"
             transform="rotate(-135)"/>
     <circle cx="0" cy="0" r="${R + 5}" fill="none"
-            stroke="${def.color}" stroke-width="4" opacity="${placed ? "0.85" : "0"}"
+            stroke="${def.color}" stroke-width="4" opacity="0.85"
             stroke-dasharray="${dash} ${circumference - dash}"
             stroke-dashoffset="0" transform="rotate(-135)"
             style="transition: stroke-dasharray 0.8s ease"/>
@@ -230,26 +250,35 @@ function buildMedallion(
 export function updateStage(svgEl: SVGSVGElement): void {
   const now = Date.now();
 
-  for (const def of CHARACTERS) {
-    const slot = svgEl.getElementById(`char-slot-${def.id}`);
+  // Build ordered list: placed characters first (in placement order), then nulls for empty slots
+  const placedIds = CHARACTERS.filter((c) => GAME.placedCharacters.has(c.id)).map((c) => c.id);
+  const slotCount = CHARACTERS.length;
+
+  for (let i = 0; i < slotCount; i++) {
+    const slot = svgEl.getElementById(`char-slot-${i}`);
     if (!slot) continue;
 
-    const placed = GAME.placedCharacters.has(def.id);
-    const isPulsing = (pulsingChars.get(def.id) ?? 0) > now;
-
-    slot.innerHTML = buildMedallion(def.id, placed, isPulsing);
-
-    // Opacity & pointer cursor
-    const opacity = placed ? "1" : "0.35";
-    slot.setAttribute("opacity", opacity);
+    const charId = placedIds[i] ?? null;
+    if (charId) {
+      const isPulsing = (pulsingChars.get(charId) ?? 0) > now;
+      slot.innerHTML = buildMedallion(charId, isPulsing);
+      slot.setAttribute("opacity", "1");
+    } else {
+      slot.innerHTML = buildPlaceholder();
+      slot.setAttribute("opacity", "1");
+    }
   }
 
-  // Draw action arc if both chars are pulsing
+  // Draw action arc if any char is pulsing
   const arcEl = svgEl.getElementById("action-arc");
   if (arcEl) {
     const anyPulsing = [...pulsingChars.entries()].some(([, until]) => until > now);
-    if (anyPulsing) {
-      arcEl.setAttribute("d", "M 184,250 Q 328,190 472,250");
+    if (anyPulsing && placedIds.length >= 2) {
+      const p0 = SLOT_POSITIONS[0];
+      const p1 = SLOT_POSITIONS[1];
+      const mx = (p0.x + p1.x) / 2;
+      const my = Math.min(p0.y, p1.y) - 60;
+      arcEl.setAttribute("d", `M ${p0.x},${p0.y} Q ${mx},${my} ${p1.x},${p1.y}`);
       arcEl.setAttribute("opacity", "0.7");
     } else {
       arcEl.setAttribute("opacity", "0");
@@ -265,7 +294,6 @@ export function wireDropZone(
   svgEl: SVGSVGElement,
   onCharacterPlaced: (id: string) => void
 ): void {
-  // The whole SVG acts as the drop target once a char is tapped/dragged
   svgEl.addEventListener("click", () => {
     if (!tapPendingCharId) return;
     placeCharacter(tapPendingCharId);

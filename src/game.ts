@@ -76,14 +76,10 @@ export function boot(): void {
   // Affection is pre-seeded to 0 for every pair so the runtime never encounters
   // an undefined lookup when evaluating conditions like `affection[@recipient] >= 3`.
   for (const def of CHARACTERS) {
-    const affection: Record<string, number> = {};
-    for (const other of CHARACTERS) {
-      if (other.id !== def.id) affection[other.id] = 0;
-    }
     addCharacter(def.id, def.name, def.id /* offstage */, {
       charm: def.charm,
       archetype: def.archetype,
-      affection,
+      affection: 0,
     });
   }
 }
@@ -174,11 +170,8 @@ async function runStep(): Promise<void> {
 
 // ── Character state helpers ───────────────────────────────────────────────────
 
-export function getAffection(fromId: string, toId: string): number {
-  const entity = STATE.entities[fromId];
-  if (!entity) return 0;
-  const aff = entity.affection as Record<string, number> | undefined;
-  return aff?.[toId] ?? 0;
+export function getAffection(charId: string): number {
+  return (STATE.entities[charId]?.affection as number) ?? 0;
 }
 
 export function getCharm(charId: string): number {
