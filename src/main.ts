@@ -13,10 +13,10 @@ import { showMomentCard, appendScrollEntry, celebrateGoal } from "./moments";
 type ActionInfo = { id: string; label: string; minAff: number };
 
 const ACTION_CATALOGUE: ActionInfo[] = [
-  { id: "exchange-pleasantries", label: "Exchange Pleasantries", minAff: 0 },
-  { id: "offer-compliment",      label: "Offer Compliment",      minAff: 0 },
-  { id: "show-interest",         label: "Show Interest",         minAff: 3 },
-  { id: "request-dance",         label: "Request Dance",         minAff: 10 },
+  { id: "exchange-pleasantries", label: "Exchange Pleasantries", minAff: 0  },
+  { id: "offer-compliment",      label: "Offer a Compliment",    minAff: 5  },
+  { id: "show-interest",         label: "Show Interest",         minAff: 12 },
+  { id: "request-dance",         label: "Request a Dance",       minAff: 20 },
 ];
 
 function renderActionRows(charId: string): string {
@@ -127,7 +127,7 @@ function renderGoal(): void {
     <div class="goal-seal">✦</div>
     <div class="goal-text">
       <div class="goal-heading">This Evening's Ambition</div>
-      <div class="goal-desc">Lord Ashworth must request a dance with Miss Pemberton</div>
+      <div class="goal-desc">Secure a dance before the evening ends</div>
     </div>
   `;
 }

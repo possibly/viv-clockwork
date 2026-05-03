@@ -34,9 +34,13 @@
     #app {
       display: grid;
       height: 100dvh;
-      /* header | [stage + side-column] | guest-list */
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto 1fr auto auto;
       grid-template-columns: 1fr;
+      grid-template-areas:
+        "header"
+        "stage"
+        "chronicle-m"
+        "guests";
     }
 
     @media (min-width: 700px) {
@@ -52,14 +56,17 @@
       #stage-wrap    { grid-area: stage;  }
       #side-column   { grid-area: side; display: flex !important; }
       #guest-section { grid-area: guests; }
+      #chronicle-mobile { display: none; }
     }
 
     /* ── Header ──────────────────────────────────────────────────────────── */
     #header {
+      grid-area: header;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 18px;
+      gap: 10px;
+      padding: 8px 14px;
       background: #08101e;
       border-bottom: 1px solid #1e2d44;
       flex-shrink: 0;
@@ -67,23 +74,25 @@
 
     #header h1 {
       font-family: 'Cinzel', serif;
-      font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+      font-size: clamp(0.75rem, 2.5vw, 1.1rem);
       font-weight: 600;
       letter-spacing: 0.18em;
       color: var(--gold);
       text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     /* Goal indicator pill */
     #goal-indicator {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       background: #111c2e;
       border: 1px solid #2a3d5a;
       border-radius: 20px;
-      padding: 6px 14px;
-      max-width: min(480px, 55vw);
+      padding: 5px 12px;
+      min-width: 0;
       transition: border-color 0.5s, background 0.5s;
     }
 
@@ -93,7 +102,7 @@
     }
 
     .goal-seal {
-      font-size: 1.1rem;
+      font-size: 1rem;
       color: var(--gold);
       flex-shrink: 0;
       transition: transform 0.4s;
@@ -106,7 +115,7 @@
 
     .goal-heading {
       font-family: 'Cinzel', serif;
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       letter-spacing: 0.14em;
       color: var(--dim);
       text-transform: uppercase;
@@ -114,14 +123,18 @@
     }
 
     .goal-desc {
-      font-size: clamp(0.68rem, 1.8vw, 0.8rem);
+      font-size: clamp(0.6rem, 1.8vw, 0.8rem);
       font-style: italic;
       color: #b0a080;
       line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* ── Stage wrap ──────────────────────────────────────────────────────── */
     #stage-wrap {
+      grid-area: stage;
       position: relative;
       min-height: 0;
       overflow: hidden;
@@ -144,22 +157,21 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      padding: 16px;
+      gap: 10px;
+      padding: 12px;
     }
 
     .moment-card {
-      width: min(480px, 90vw);
+      width: min(440px, 92vw);
       border: 1px solid transparent;
       border-radius: var(--r);
-      padding: 22px 24px 18px;
+      padding: 16px 20px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       text-align: center;
       box-shadow: 0 8px 40px #00000088, 0 0 0 1px #ffffff08;
-      /* Enter: scale up from slightly below */
       opacity: 0;
       transform: translateY(18px) scale(0.97);
       transition: opacity 0.35s ease, transform 0.35s ease;
@@ -182,6 +194,10 @@
       flex-shrink: 0;
     }
 
+    @media (max-width: 699px) {
+      .moment-ornament { display: none; }
+    }
+
     .moment-label {
       font-family: 'Cinzel', serif;
       font-size: 0.62rem;
@@ -191,12 +207,12 @@
     }
 
     .moment-text {
-      font-size: clamp(0.88rem, 2.2vw, 1.05rem);
+      font-size: clamp(0.85rem, 2.2vw, 1.05rem);
       font-style: italic;
       font-weight: 500;
-      line-height: 1.65;
+      line-height: 1.6;
       color: #f0e6d2;
-      max-width: 38ch;
+      max-width: 36ch;
       border: none;
       padding: 0;
     }
@@ -223,11 +239,11 @@
       background: linear-gradient(160deg, #1a1200 0%, #0a0800 100%);
       border: 1px solid var(--gold);
       border-radius: var(--r);
-      padding: 28px 32px;
+      padding: 24px 28px;
       text-align: center;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       box-shadow: 0 0 60px #c9a96e44;
       opacity: 0;
@@ -241,27 +257,27 @@
     }
 
     .celebration-ornament {
-      font-size: 1.8rem;
+      font-size: 1.6rem;
       color: var(--gold);
       letter-spacing: 0.5em;
     }
 
     .celebration-title {
       font-family: 'Cinzel', serif;
-      font-size: clamp(1rem, 4vw, 1.4rem);
+      font-size: clamp(0.95rem, 4vw, 1.4rem);
       font-weight: 600;
       color: var(--gold);
       letter-spacing: 0.08em;
     }
 
     .celebration-sub {
-      font-size: clamp(0.82rem, 2vw, 0.95rem);
+      font-size: clamp(0.8rem, 2vw, 0.95rem);
       font-style: italic;
       color: #b0a070;
       line-height: 1.7;
     }
 
-    /* ── Side column (desktop only, hidden on mobile) ────────────────────── */
+    /* ── Side column (desktop only) ──────────────────────────────────────── */
     #side-column {
       display: none;
       flex-direction: column;
@@ -293,24 +309,21 @@
     #chronicle-scroll::-webkit-scrollbar { width: 4px; }
     #chronicle-scroll::-webkit-scrollbar-thumb { background: #2a3d5a; border-radius: 2px; }
 
-    /* On mobile, show chronicle below the stage */
+    /* Mobile chronicle strip */
     #chronicle-mobile {
-      display: block;
+      grid-area: chronicle-m;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
-      white-space: nowrap;
-      padding: 8px;
+      padding: 6px 8px;
       background: #08101e;
       border-top: 1px solid #1e2d44;
     }
-    #chronicle-mobile #chronicle-scroll {
+
+    #chronicle-scroll-mobile {
+      display: flex;
       flex-direction: row;
+      gap: 6px;
       white-space: nowrap;
-      overflow-x: auto;
-      overflow-y: hidden;
-    }
-    @media (min-width: 700px) {
-      #chronicle-mobile { display: none; }
     }
 
     .scroll-entry {
@@ -346,16 +359,15 @@
       white-space: normal;
     }
 
-    /* On mobile, scroll entries are horizontal pills */
+    /* Mobile: entries are horizontal pills */
     @media (max-width: 699px) {
       .scroll-entry {
         display: inline-block;
-        min-width: 180px;
-        max-width: 240px;
+        min-width: 160px;
+        max-width: 220px;
         border-left: none;
         border-bottom: 2px solid transparent;
         border-radius: 6px;
-        margin-right: 6px;
         transform: translateY(6px);
       }
       .scroll-entry--visible { transform: translateY(0); }
@@ -363,20 +375,23 @@
 
     /* ── Guest list ──────────────────────────────────────────────────────── */
     #guest-section {
-      padding: 10px 14px;
+      grid-area: guests;
+      padding: 8px 12px;
       background: #060e1c;
       border-top: 1px solid #1e2d44;
       display: flex;
       align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+      gap: 10px;
     }
 
     #guest-list {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex: 1;
-      flex-wrap: wrap;
+      min-width: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
     }
 
     .guest-card {
@@ -386,8 +401,9 @@
       background: #0f1e30;
       border: 1px solid #1e2d44;
       border-radius: 10px;
-      padding: 8px 12px;
+      padding: 7px 11px;
       cursor: grab;
+      flex-shrink: 0;
       transition: border-color 0.2s, transform 0.15s, opacity 0.3s;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
@@ -403,7 +419,7 @@
     }
 
     .guest-card--placed {
-      opacity: 0.65;
+      opacity: 0.55;
       cursor: default;
       pointer-events: none;
     }
@@ -411,12 +427,12 @@
     .guest-top {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
     }
 
     .guest-portrait {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -426,39 +442,47 @@
 
     .guest-initial {
       font-family: 'Cinzel', serif;
-      font-size: 1rem;
+      font-size: 0.9rem;
       color: white;
       font-weight: 600;
     }
 
     .guest-name {
       font-family: 'Cinzel', serif;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--cream);
       letter-spacing: 0.05em;
-    }
-
-    .guest-title {
-      font-size: 0.68rem;
-      font-style: italic;
-      color: var(--dim);
-    }
-
-    .guest-status {
-      font-size: 0.62rem;
-      font-family: sans-serif;
-      color: #4a6080;
       white-space: nowrap;
     }
 
-    /* ── Action availability panel ───────────────────────────────────────── */
+    .guest-title {
+      font-size: 0.65rem;
+      font-style: italic;
+      color: var(--dim);
+      white-space: nowrap;
+    }
+
+    .guest-status {
+      font-size: 0.6rem;
+      font-family: sans-serif;
+      color: #4a6080;
+      white-space: nowrap;
+      margin-left: auto;
+      padding-left: 6px;
+    }
+
+    /* ── Action availability panel (desktop only) ────────────────────────── */
     .guest-actions {
-      margin-top: 7px;
-      padding-top: 7px;
+      margin-top: 6px;
+      padding-top: 6px;
       border-top: 1px solid #192840;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
+    }
+
+    @media (max-width: 699px) {
+      .guest-actions { display: none; }
     }
 
     .action-row {
@@ -492,9 +516,9 @@
     /* ── Begin button ────────────────────────────────────────────────────── */
     #begin-btn {
       font-family: 'Cinzel', serif;
-      font-size: 0.78rem;
-      letter-spacing: 0.14em;
-      padding: 10px 22px;
+      font-size: clamp(0.7rem, 2vw, 0.78rem);
+      letter-spacing: 0.12em;
+      padding: 10px 18px;
       background: #0f1e30;
       color: #4a6080;
       border: 1px solid #1e2d44;
@@ -502,9 +526,10 @@
       cursor: not-allowed;
       transition: all 0.3s;
       white-space: nowrap;
+      flex-shrink: 0;
+      min-height: 44px;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
-      flex-shrink: 0;
     }
 
     #begin-btn.begin-btn--ready:not(:disabled) {
@@ -515,9 +540,16 @@
       box-shadow: 0 0 20px #c9a96e22;
     }
 
-    #begin-btn.begin-btn--ready:not(:disabled):hover {
+    #begin-btn.begin-btn--ready:not(:disabled):active {
       background: #1a1200;
       box-shadow: 0 0 28px #c9a96e44;
+    }
+
+    @media (hover: hover) {
+      #begin-btn.begin-btn--ready:not(:disabled):hover {
+        background: #1a1200;
+        box-shadow: 0 0 28px #c9a96e44;
+      }
     }
 
     #begin-btn:disabled {
